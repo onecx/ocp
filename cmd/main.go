@@ -41,10 +41,8 @@ func createApp(bv BuildVersion) (*cobra.Command, *globalOptions) {
 	}
 	rootCommand.PersistentFlags().BoolVar(&opts.debug, "debug", false, "enable debug output")
 	rootCommand.AddCommand(
-		manifestCmd(&opts),
 		reportCmd(&opts),
-		helmCmd(&opts),
-		imageCmd(&opts),
+		repositoryCmd(&opts),
 		versionCmd,
 	)
 	return rootCommand, &opts

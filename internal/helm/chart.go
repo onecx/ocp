@@ -16,6 +16,20 @@ import (
 	ri "helm.sh/helm/v4/pkg/release"
 )
 
+func GetVersions(url string) ([]string, error) {
+	client, err := createClient()
+	if err != nil {
+		return nil, err
+	}
+
+	ref := strings.TrimPrefix(url, "oci://")
+	versions, err := client.Tags(ref)
+	if err != nil {
+		return nil, fmt.Errorf("list versions for %q: %w", ref, err)
+	}
+	return versions, nil
+}
+
 func GetChart(url string) (*v2.Chart, string, error) {
 	tmpDir, err := os.MkdirTemp("", "ocp-chart-*")
 	if err != nil {
@@ -72,12 +86,7 @@ func TemplateChart(chrt *v2.Chart, product string, values map[string]any) ([]str
 
 func DigestChart(chartURL string) (string, error) {
 
-	registryConfig := cli.New().RegistryConfig
-
-	client, err := registry.NewClient(
-		registry.ClientOptEnableCache(true),
-		registry.ClientOptCredentialsFile(registryConfig),
-	)
+	client, err := createClient()
 	if err != nil {
 		return "", err
 	}
@@ -90,7 +99,7 @@ func DigestChart(chartURL string) (string, error) {
 }
 
 func DownloadChart(chartURL, destDir string) (string, error) {
-	client, err := registry.NewClient(registry.ClientOptEnableCache(true))
+	client, err := createClient()
 	if err != nil {
 		return "", err
 	}
@@ -115,4 +124,17 @@ func DownloadChart(chartURL, destDir string) (string, error) {
 		return "", fmt.Errorf("download chart %s: %w", chartURL, err)
 	}
 	return file, nil
+}
+
+func createClient() (*registry.Client, error) {
+	registryConfig := cli.New().RegistryConfig
+
+	client, err := registry.NewClient(
+		registry.ClientOptEnableCache(true),
+		registry.ClientOptCredentialsFile(registryConfig),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
 }
