@@ -21,7 +21,7 @@ func GetChart(url string) (*v2.Chart, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("create temp dir: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	file, err := DownloadChart(url, tmpDir)
 	if err != nil {

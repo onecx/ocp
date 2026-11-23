@@ -235,7 +235,10 @@ func write(file string, out []byte, stdout io.Writer) error {
 		}
 		return nil
 	}
-	fmt.Fprintf(stdout, "%s", string(out))
+	_, err := fmt.Fprintf(stdout, "%s", string(out))
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
