@@ -101,7 +101,7 @@ func sharedRepositoryFlags() (pflag.FlagSet, *sharedRepositoryOptions) {
 
 	var opts sharedRepositoryOptions
 	var flags pflag.FlagSet
-	flags.StringVarP(&opts.dir, "dir", "d", filepath.Join(homeDir, ".ocp", "repository"), "Directory for the repository")
+	flags.StringVarP(&opts.dir, "repository", "d", filepath.Join(homeDir, ".ocp", "repository"), "Directory for the repository")
 	flags.StringVar(&opts.repositoryUrlTemplate, "repository-url-template", "{{.Registry}}/{{.Organization}}/charts/{{.Product}}", "repository URL template. Variables [Registry, Organization, Product]")
 	return flags, &opts
 }
