@@ -9,21 +9,21 @@ import (
 	"onecx.tkit.org/ocp/internal/manifest"
 )
 
-type repositoryScanOptions struct {
+type repositoryVersionsOptions struct {
 	global     *globalOptions
 	product    *sharedProductOptions
 	repository *sharedRepositoryOptions
 	manifest   *sharedManifestOptions
 	helmChart  *sharedHelmChartOptions
-	count      int
+	latest     int
 }
 
-func repositoryScanCmd(global *globalOptions) *cobra.Command {
+func repositoryVersionsCmd(global *globalOptions) *cobra.Command {
 	sharedFlags, sharedOpts := sharedProductFlags()
 	sharedRepoFlags, sharedRepoOpts := sharedRepositoryFlags()
 	sharedManifestFlags, sharedManifestOpts := sharedManifestFlags()
 	sharedHelmChartFlags, sharedHelmChartOpts := sharedHelmChartFlags()
-	opts := repositoryScanOptions{
+	opts := repositoryVersionsOptions{
 		global:     global,
 		product:    sharedOpts,
 		repository: sharedRepoOpts,
@@ -31,8 +31,8 @@ func repositoryScanCmd(global *globalOptions) *cobra.Command {
 		helmChart:  sharedHelmChartOpts,
 	}
 	cmd := &cobra.Command{
-		Use:   "scan",
-		Short: "Scan a repository for the current product version",
+		Use:   "versions",
+		Short: "Create last n-versions of the current product",
 		RunE:  commandAction(opts.run),
 	}
 	flags := cmd.Flags()
@@ -40,11 +40,11 @@ func repositoryScanCmd(global *globalOptions) *cobra.Command {
 	flags.AddFlagSet(&sharedRepoFlags)
 	flags.AddFlagSet(&sharedManifestFlags)
 	flags.AddFlagSet(&sharedHelmChartFlags)
-	flags.IntVar(&opts.count, "count", 20, "Number of lastchart versions to retrieve")
+	flags.IntVar(&opts.latest, "latest", 20, "Number of last chart versions to store in the repository")
 	return cmd
 }
 
-func (opts *repositoryScanOptions) run(args []string, stdout io.Writer) (retErr error) {
+func (opts *repositoryVersionsOptions) run(args []string, stdout io.Writer) (retErr error) {
 	if err := opts.repository.createRepositoryDir(); err != nil {
 		return err
 	}
@@ -58,8 +58,8 @@ func (opts *repositoryScanOptions) run(args []string, stdout io.Writer) (retErr 
 		return fmt.Errorf("get chart versions: %w", err)
 	}
 
-	if len(versions) > opts.count {
-		versions = versions[:opts.count]
+	if len(versions) > opts.latest {
+		versions = versions[:opts.latest]
 	}
 
 	for _, v := range versions {
@@ -71,7 +71,7 @@ func (opts *repositoryScanOptions) run(args []string, stdout io.Writer) (retErr 
 			return fmt.Errorf("check manifest file in repository: %w", err)
 		}
 		if exists {
-			return nil
+			continue
 		}
 
 		url, err := opts.helmChart.helmChartUrl(opts.product.registry, opts.product.organization, opts.product.product, v)

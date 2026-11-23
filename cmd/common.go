@@ -20,6 +20,18 @@ import (
 	"onecx.tkit.org/ocp/internal/template"
 )
 
+type sharedCreateFileOptions struct {
+	file string
+}
+
+func sharedCreateFileFlags() (pflag.FlagSet, *sharedCreateFileOptions) {
+	opts := sharedCreateFileOptions{}
+	fs := pflag.FlagSet{}
+	fs.StringVar(&opts.file, "file", "", "YAML file listing products; see command help for its structure and example")
+	markRequired(&fs, "file")
+	return fs, &opts
+}
+
 type sharedProductsFileOptions struct {
 	file string
 }
