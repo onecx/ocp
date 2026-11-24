@@ -10,7 +10,7 @@ import (
 	"onecx.tkit.org/ocp/internal/template"
 )
 
-type reportOptions struct {
+type productReportOptions struct {
 	global       *globalOptions
 	repository   *sharedRepositoryOptions
 	output       *sharedOutputOptions
@@ -18,11 +18,11 @@ type reportOptions struct {
 	template     string
 }
 
-func reportCmd(global *globalOptions) *cobra.Command {
+func productReportCmd(global *globalOptions) *cobra.Command {
 	sharedOutputFlags, sharedOutputOpts := sharedOutputFlags()
 	sharedRepositoryFlags, sharedRepositoryOpts := sharedRepositoryFlags()
 	sharedProductsFileFlags, sharedProductsFileOpts := sharedProductsFileFlags()
-	opts := reportOptions{
+	opts := productReportOptions{
 		global:       global,
 		repository:   sharedRepositoryOpts,
 		productsFile: sharedProductsFileOpts,
@@ -45,7 +45,7 @@ func reportCmd(global *globalOptions) *cobra.Command {
 	return cmd
 }
 
-func (opts *reportOptions) run(args []string, stdout io.Writer) (retErr error) {
+func (opts *productReportOptions) run(args []string, stdout io.Writer) (retErr error) {
 
 	products, err := products.LoadProductsFile(opts.productsFile.file)
 	if err != nil {

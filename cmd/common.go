@@ -93,6 +93,10 @@ type sharedRepositoryOptions struct {
 }
 
 func sharedRepositoryFlags() (pflag.FlagSet, *sharedRepositoryOptions) {
+	return sharedRepositoryFlagsWithPrefix("")
+}
+
+func sharedRepositoryFlagsWithPrefix(prefix string) (pflag.FlagSet, *sharedRepositoryOptions) {
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -101,8 +105,12 @@ func sharedRepositoryFlags() (pflag.FlagSet, *sharedRepositoryOptions) {
 
 	var opts sharedRepositoryOptions
 	var flags pflag.FlagSet
-	flags.StringVarP(&opts.dir, "repository", "d", filepath.Join(homeDir, ".ocp", "repository"), "Directory for the repository")
-	flags.StringVar(&opts.repositoryUrlTemplate, "repository-url-template", "{{.Registry}}/{{.Organization}}/charts/{{.Product}}", "repository URL template. Variables [Registry, Organization, Product]")
+	shorthand := ""
+	if prefix == "" {
+		shorthand = "d"
+	}
+	flags.StringVarP(&opts.dir, prefix+"repository", shorthand, filepath.Join(homeDir, ".ocp", "repository"), "Directory for the repository")
+	flags.StringVar(&opts.repositoryUrlTemplate, prefix+"repository-url-template", "{{.Registry}}/{{.Organization}}/charts/{{.Product}}", "repository URL template. Variables [Registry, Organization, Product]")
 	return flags, &opts
 }
 
