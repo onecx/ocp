@@ -1,5 +1,12 @@
 # ocp
 
+## Install
+
+```
+curl -sSfL "https://github.com/onecx/ocp/releases/download/${OCP_VERSION}/ocp_Linux_x86_64.tar.gz" \
+  | sudo tar -xz -C /usr/local/bin ocp
+```
+
 ## Copy product manifests
 
 ```sh
