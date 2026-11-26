@@ -115,18 +115,19 @@ func CreateManifest(cfg *Config) (*Manifest, error) {
 				}
 
 				desc := descriptors[img.Image]
-				if desc != nil {
-					item.Arch = getArchs(desc)
-					item.Type = string(detectType(desc))
-					item.Digest = desc.Descriptor.Digest.String()
+				if desc == nil {
+					continue
+				}
+				item.Arch = getArchs(desc)
+				item.Type = string(detectType(desc))
+				item.Digest = desc.Descriptor.Digest.String()
 
-					a := desc.Descriptor.Annotations
-					if a != nil {
-						item.Source = a["org.opencontainers.image.source"]
-						item.CreatedAt = value(a, "samo.project.created", "org.opencontainers.image.created")
-						item.Revision = value(a, "samo.project.revision", "org.opencontainers.image.revision")
-						item.BuildVersion = value(a, "samo.project.version", "org.opencontainers.image.version")
-					}
+				a := desc.Descriptor.Annotations
+				if a != nil {
+					item.Source = a["org.opencontainers.image.source"]
+					item.CreatedAt = value(a, "samo.project.created", "org.opencontainers.image.created")
+					item.Revision = value(a, "samo.project.revision", "org.opencontainers.image.revision")
+					item.BuildVersion = value(a, "samo.project.version", "org.opencontainers.image.version")
 				}
 				images = append(images, item)
 			}
