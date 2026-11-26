@@ -15,6 +15,7 @@ func repositoryCmd(global *globalOptions) *cobra.Command {
 		repositoryManifestCmd(global),
 		repositoryProductsCmd(global),
 		repositoryCreateFileCmd(global),
+		repositoryHousekeepingCmd(global),
 	)
 	return cmd
 }
