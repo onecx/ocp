@@ -246,7 +246,11 @@ func TestDownloadChartCreatesDestination(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			t.Errorf("close downloaded chart: %v", err)
+		}
+	}()
 	data, err := io.ReadAll(file)
 	if err != nil || string(data) != string(archive) || filepath.Dir(path) != dest {
 		t.Fatalf("downloaded chart differs: path=%q, error=%v", path, err)
