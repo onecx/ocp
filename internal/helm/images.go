@@ -26,8 +26,7 @@ type HelmImages struct {
 	Images map[string][]*HelmImage `json:"images" yaml:"images"`
 }
 
-func TemplateImagesFromChart(chrt *v2.Chart, product string, inputValues []string) (*HelmImages, error) {
-
+func TemplateImageFromChart(chrt *v2.Chart, product string, inputValues []string) ([]*HelmImage, error) {
 	values := map[string]any{}
 
 	for _, v := range inputValues {
@@ -35,42 +34,51 @@ func TemplateImagesFromChart(chrt *v2.Chart, product string, inputValues []strin
 			return nil, fmt.Errorf("parse input value %s: %w", v, err)
 		}
 	}
-
 	manifests, err := TemplateChart(chrt, product, values)
 	if err != nil {
 		return nil, err
 	}
-	images := []*HelmImage{}
+
 	tmp, err := TemplateImagesList(manifests)
 	if err != nil {
 		return nil, fmt.Errorf("template images: %w", err)
 	}
-	images = append(images, tmp...)
+	return tmp, nil
+}
 
+func TemplateImagesFromChart(chrt *v2.Chart, product string, inputValues []string) (*HelmImages, error) {
+
+	values := []string{}
+	values = append(values, inputValues...)
+
+	// enable all deployment condition
+	for _, dep := range chrt.Metadata.Dependencies {
+		if dep.Condition != "" {
+			values = append(values, dep.Condition+"=true")
+		}
+	}
+
+	images := []*HelmImage{}
+	imgs, err := TemplateImageFromChart(chrt, product, values)
+	if err != nil {
+		return nil, err
+	}
+	images = append(images, imgs...)
+
+	// enable onecx native
 	for _, dep := range chrt.Metadata.Dependencies {
 		name := dep.Alias
 		if name == "" {
 			name = dep.Name
 		}
-		if dep.Condition != "" {
-			if err := strvals.ParseInto(dep.Condition+"=true", values); err != nil {
-				return nil, fmt.Errorf("parse condition of %s: %w", name, err)
-			}
-		}
-		if err := strvals.ParseInto(name+".app.image.suffix=native", values); err != nil {
-			return nil, fmt.Errorf("set native suffix of %s: %w", name, err)
-		}
+		values = append(values, name+".app.image.suffix=native")
 	}
 
-	manifests, err = TemplateChart(chrt, product, values)
+	imgs, err = TemplateImageFromChart(chrt, product, values)
 	if err != nil {
 		return nil, err
 	}
-	tmp, err = TemplateImagesList(manifests)
-	if err != nil {
-		return nil, fmt.Errorf("template images: %w", err)
-	}
-	images = append(images, tmp...)
+	images = append(images, imgs...)
 
 	mi := map[string]*HelmImage{}
 	for _, img := range images {
