@@ -20,11 +20,12 @@ func imageSignatures(images []*HelmImage) []string {
 }
 
 func TestTemplateImagesList(t *testing.T) {
-	manifests := []string{`apiVersion: apps/v1
+	manifests := []string{`# Source: app/charts/backend/charts/app/templates/deployment.yaml
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: backend
+    app: ignored
 spec:
   template:
     spec:
@@ -45,11 +46,9 @@ spec:
         - {image: not-an-object}
         - not-an-object
 ---
+# Source: app/charts/cron/templates/cronjob.yaml
 apiVersion: batch/v1
 kind: CronJob
-metadata:
-  labels:
-    app: cron
 spec:
   jobTemplate:
     spec:
@@ -58,6 +57,7 @@ spec:
           containers:
             - {image: "registry.example/cron:1"}
 ---
+# Source: app/templates/pod.yaml
 kind: Pod
 spec:
   containers:
@@ -75,7 +75,7 @@ null
 		t.Fatal(err)
 	}
 	want := []string{
-		" containers registry.example/unlabelled:1 Pod",
+		" containers registry.example/unlabelled:1 Pod", // template of the chart itself has no alias
 		"backend containers registry.example/app:1 Deployment",
 		"backend containers registry.example/app:1 Deployment",
 		"backend ephemeralContainers registry.example/debug:1 Deployment",
@@ -133,8 +133,8 @@ spec:
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"backend containers registry.example/override:2 Pod"}
-	if len(got.Images) != 1 || !reflect.DeepEqual(imageSignatures(got.Images["backend"]), want) {
+	want := []string{" containers registry.example/override:2 Pod"} // template of the chart itself has no alias
+	if len(got.Images) != 1 || !reflect.DeepEqual(imageSignatures(got.Images[""]), want) {
 		t.Fatalf("images = %#v, want one deduplicated image", got.Images)
 	}
 }
@@ -182,11 +182,11 @@ spec:
 				t.Fatal(err)
 			}
 			want := []string{
-				"backend containers registry.example/backend:1 Pod",
-				"backend containers registry.example/backend:1-native Pod",
+				key + " containers registry.example/backend:1 Pod",
+				key + " containers registry.example/backend:1-native Pod",
 			}
-			if !reflect.DeepEqual(imageSignatures(got.Images["backend"]), want) {
-				t.Fatalf("images = %q, want %q", imageSignatures(got.Images["backend"]), want)
+			if !reflect.DeepEqual(imageSignatures(got.Images[key]), want) {
+				t.Fatalf("images = %q, want %q", imageSignatures(got.Images[key]), want)
 			}
 		})
 	}
@@ -201,7 +201,7 @@ func TestTemplateImagesFromChartErrors(t *testing.T) {
 	}{
 		{"invalid value", testChart(), []string{"broken[not-an-index]=value"}, "parse input value"},
 		{"render failure", testChart(&common.File{Name: "templates/pod.yaml", Data: []byte(`{{fail "render unavailable"}}`)}), nil, "render unavailable"},
-		{"invalid dependency condition", dependencyChart("", "backend.enabled[not-an-index]", "kind: Pod\nmetadata:\n  name: backend\n"), nil, "parse condition of backend"},
+		{"invalid dependency condition", dependencyChart("", "backend.enabled[not-an-index]", "kind: Pod\nmetadata:\n  name: backend\n"), nil, "parse input value"},
 		{"native render failure", dependencyChart("", "", `{{if eq .Values.app.image.suffix "native"}}{{fail "native unavailable"}}{{end}}
 kind: Pod
 metadata:

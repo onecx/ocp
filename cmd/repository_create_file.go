@@ -34,7 +34,32 @@ func repositoryCreateFileCmd(global *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "creates",
 		Short: "Creates repository from the YAML create-file",
-		RunE:  commandAction(opts.run),
+		Long: `Create the manifests of the latest versions of every product listed in the create file.
+
+For every product the chart versions are read from the registry and the manifests of the first
+"count" versions (the order returned by the registry) are created. Versions that already exist
+in the repository are skipped.
+
+The create file is a YAML file with optional defaults that every product inherits:
+
+  defaults:
+    registry: oci://ghcr.io
+    organization: onecx
+    count: 5            # versions per product, default 10
+  products:
+    - product: onecx-test
+    - product: onecx-workspace
+      count: 2          # overrides the default
+    - product: other-product
+      organization: other-org
+
+Every product needs registry, organization, product and count, either set directly or inherited
+from defaults. Duplicate products are rejected.`,
+		Example: `  ocp repository creates --file create.yaml
+
+  # into a different repository directory
+  ocp repository creates --file create.yaml --repository /srv/ocp`,
+		RunE: commandAction(opts.run),
 	}
 	flags := cmd.Flags()
 	flags.AddFlagSet(&sharedRepoFlags)

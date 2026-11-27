@@ -31,7 +31,36 @@ func productCopyCmd(global *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "copy",
 		Short: "Copy the list of products' versions from source to target repository",
-		RunE:  commandAction(opts.run),
+		Long: `Copy the manifest files of the products listed in the products file from the source
+repository (--source-repository) to the target repository (--repository).
+
+The manifests are copied byte for byte and the target directories are created as needed.
+A manifest that already exists in the target repository is skipped. A manifest that is
+missing in the source repository is reported and skipped.
+
+The products file is a YAML file with optional defaults that every product inherits:
+
+  defaults:
+    registry: oci://ghcr.io
+    organization: onecx
+  products:
+    - product: onecx-test
+      version: 1.14.0
+    - product: onecx-workspace
+      version: 2.0.0
+    - product: onecx-test
+      version: 1.13.0
+      organization: other-org   # overrides the default
+
+Every product needs registry, organization, product and version, either set directly or
+inherited from defaults. Duplicate products are rejected.`,
+		Example: `  # copy the manifests listed in products.yaml from one repository to another
+  ocp product copy --products-file products.yaml \
+    --source-repository /path/to/source --repository /path/to/target
+
+  # copy from the default repository (~/.ocp/repository) to a shared directory
+  ocp product copy --products-file products.yaml --repository /srv/ocp`,
+		RunE: commandAction(opts.run),
 	}
 	flags := cmd.Flags()
 	flags.AddFlagSet(&sharedRepositoryFlags)

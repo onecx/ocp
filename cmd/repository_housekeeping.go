@@ -31,7 +31,26 @@ func repositoryHousekeepingCmd(global *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "housekeeping",
 		Short: "Perform housekeeping tasks for the repository",
-		RunE:  commandAction(opts.run),
+		Long: `Delete the manifests of pre-release versions (release candidates) that are no longer needed.
+
+Manifest files are grouped by their base version (X.Y.Z, without the pre-release part). The
+pre-release manifests of the latest --versions base versions are kept, the pre-release manifests
+of all older base versions are deleted. Final releases are never deleted. Files whose name is
+not a semantic version are skipped with a warning.
+
+Example with --versions 2 and the manifests 1.2.0, 1.2.0-rc.1, 1.1.0-rc.2, 1.0.0-rc.1:
+the base versions are 1.2.0, 1.1.0 and 1.0.0; only 1.0.0-rc.1 is deleted.
+
+Use --dry-run to only log what would be deleted.`,
+		Example: `  # show which release candidates would be deleted
+  ocp repository housekeeping --dry-run
+
+  # keep the release candidates of the latest 3 base versions, for one product only
+  ocp repository housekeeping --product onecx-test --versions 3
+
+  # clean up another repository directory
+  ocp repository housekeeping --repository /srv/ocp`,
+		RunE: commandAction(opts.run),
 	}
 	flags := cmd.Flags()
 	flags.AddFlagSet(&sharedRepoFlags)

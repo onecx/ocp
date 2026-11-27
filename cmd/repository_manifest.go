@@ -26,7 +26,17 @@ func repositoryManifestCmd(global *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "manifest",
 		Short: "Display the manifest for the current product version",
-		RunE:  commandAction(opts.run),
+		Long: `Print the manifest of one product version from the repository.
+
+The manifest must exist in the repository (see "ocp repository create"). The output format
+is yaml (default), json or plain, the output goes to stdout or to --output.`,
+		Example: `  ocp repository manifest --registry oci://ghcr.io --organization onecx \
+    --product onecx-test --version 1.14.0
+
+  # as JSON into a file
+  ocp repository manifest --registry oci://ghcr.io --organization onecx \
+    --product onecx-test --version 1.14.0 -f json -o manifest.json`,
+		RunE: commandAction(opts.run),
 	}
 	flags := cmd.Flags()
 	flags.AddFlagSet(&sharedFlags)

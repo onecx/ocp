@@ -33,7 +33,17 @@ func repositoryVersionsCmd(global *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "versions",
 		Short: "Create last n-versions of the current product",
-		RunE:  commandAction(opts.run),
+		Long: `Create the manifests of the latest versions of one product.
+
+The chart versions are read from the registry and the manifests of the first --latest versions
+(the order returned by the registry, default 20) are created. Versions that already exist in
+the repository are skipped.`,
+		Example: `  ocp repository versions --registry oci://ghcr.io --organization onecx --product onecx-test
+
+  # only the latest 5 versions
+  ocp repository versions --registry oci://ghcr.io --organization onecx \
+    --product onecx-test --latest 5`,
+		RunE: commandAction(opts.run),
 	}
 	flags := cmd.Flags()
 	flags.AddFlagSet(&sharedFlags)

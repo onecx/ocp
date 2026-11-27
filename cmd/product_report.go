@@ -32,7 +32,57 @@ func productReportCmd(global *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "report",
 		Short: "Display the report for the current product version",
-		RunE:  commandAction(opts.run),
+		Long: `Render a Go text/template with the manifests of the products listed in the products file.
+
+The manifests must exist in the repository (see "ocp repository products"). The template
+receives the list of manifests in .Manifests; every manifest has the fields of the manifest
+file (Organization, Product, Version, Digest, Applications, ...), where Applications maps the
+application name to its Images (Image, Digest, Type, Kind, Arch, Key, ...).
+
+Available functions are all sprig functions (https://masterminds.github.io/sprig/) and:
+
+  prefer <images> <attribute> <value>...
+      Keep, for every image available in several variants, only the variant whose attribute
+      value comes first in the list of values. The native image (tag with the suffix "-native")
+      is linked with the jvm image (same tag without the suffix). Images with other attribute
+      values are kept. The attribute is the Go field name of the image, e.g. "Type".
+
+The rendered text is written to stdout or to --output. The --format flag is not used, the
+template defines the format.
+
+The products file is a YAML file with optional defaults that every product inherits:
+
+  defaults:
+    registry: oci://ghcr.io
+    organization: onecx
+  products:
+    - product: onecx-test
+      version: 1.14.0
+    - product: onecx-workspace
+      version: 2.0.0
+    - product: onecx-test
+      version: 1.13.0
+      organization: other-org   # overrides the default
+
+Every product needs registry, organization, product and version, either set directly or
+inherited from defaults. Duplicate products are rejected.`,
+		Example: `  # report.tpl
+  {{- range .Manifests }}
+  {{ .Product }} {{ .Version }}
+  {{- range $name, $app := .Applications }}
+    {{ $name }}
+  {{- range prefer $app.Images "Type" "native" "jvm" }}
+      {{ .Image }}@{{ .Digest }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+
+  # print the report, native images preferred, jvm as fallback
+  ocp product report --products-file products.yaml --template report.tpl
+
+  # write the report to a file
+  ocp product report --products-file products.yaml -t report.tpl -o report.txt`,
+		RunE: commandAction(opts.run),
 	}
 	flags := cmd.Flags()
 	flags.StringVarP(&opts.template, "template", "t", "", "Path to the template file")

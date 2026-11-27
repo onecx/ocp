@@ -24,16 +24,17 @@ func createApp(bv BuildVersion) (*cobra.Command, *globalOptions) {
 	opts := globalOptions{}
 	rootCommand := &cobra.Command{
 		Use:               "ocp",
-		Short:             "Copy onecx products aretefacts from source registry to target registry.",
+		Short:             "Manage OneCX product manifests: create them from Helm charts, keep them in a local repository and report on them.",
 		TraverseChildren:  true,
 		PersistentPreRunE: opts.before,
 		CompletionOptions: cobra.CompletionOptions{HiddenDefaultCmd: true},
 	}
 
 	versionCmd := &cobra.Command{
-		Use:   "version",
-		Short: "Version will output the current build information",
-		Long:  ``,
+		Use:     "version",
+		Short:   "Version will output the current build information",
+		Long:    `Print the build version, commit and date of this binary.`,
+		Example: `  ocp version`,
 		Run: func(_ *cobra.Command, _ []string) {
 			resp := fmt.Sprintf("Version: %s, Commit: %s, Date: %s\n", bv.Version, bv.Commit, bv.Date)
 			fmt.Print(resp)

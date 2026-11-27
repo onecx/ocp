@@ -112,8 +112,11 @@ func decodeManifests(manifests []string, fn func(doc any, app string)) error {
 	for _, m := range manifests {
 		for _, item := range splitDocs(m) {
 			file := manifestFile(item)
-			charts := manifestSubcharts(file)
-			alias := charts[0]
+			// alias is the first level subchart of the template; templates of the chart itself have none
+			alias := ""
+			if charts := manifestSubcharts(file); len(charts) > 0 {
+				alias = charts[0]
+			}
 			dec := yaml.NewDecoder(strings.NewReader(item))
 			var doc any
 			if err := dec.Decode(&doc); err != nil {
