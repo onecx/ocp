@@ -79,6 +79,14 @@ func CreateManifest(cfg *Config) (*Manifest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load chart: %w", err)
 	}
+	aliases := map[string]string{}
+	for _, dep := range chrt.Metadata.Dependencies {
+		name := dep.Alias
+		if name == "" {
+			name = dep.Name
+		}
+		aliases[dep.Name] = name
+	}
 
 	template, err := helm.TemplateImagesFromChart(chrt, cfg.Product, cfg.HelmValues)
 	if err != nil {
@@ -105,7 +113,7 @@ func CreateManifest(cfg *Config) (*Manifest, error) {
 		}
 
 		images := []*Image{}
-		if tmp := template.Images[appName]; tmp != nil {
+		if tmp := template.Images[aliases[dep.Name]]; tmp != nil {
 			for _, img := range tmp {
 
 				item := &Image{

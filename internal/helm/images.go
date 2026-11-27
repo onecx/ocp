@@ -1,8 +1,9 @@
 package helm
 
 import (
+	"bufio"
 	"fmt"
-	"io"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -14,11 +15,11 @@ type HelmImage struct {
 	Image string `json:"image" yaml:"image"`
 	Kind  string `json:"kind" yaml:"kind"`
 	Key   string `json:"key" yaml:"key"`
-	App   string `json:"app" yaml:"app"`
+	Alias string `json:"alias" yaml:"alias"`
 }
 
 func (h *HelmImage) String() string {
-	return fmt.Sprintf("%v %v %v %v", h.App, h.Key, h.Image, h.Kind)
+	return fmt.Sprintf("%v %v %v %v", h.Alias, h.Key, h.Image, h.Kind)
 }
 
 type HelmImages struct {
@@ -39,7 +40,6 @@ func TemplateImagesFromChart(chrt *v2.Chart, product string, inputValues []strin
 	if err != nil {
 		return nil, err
 	}
-
 	images := []*HelmImage{}
 	tmp, err := TemplateImagesList(manifests)
 	if err != nil {
@@ -79,7 +79,7 @@ func TemplateImagesFromChart(chrt *v2.Chart, product string, inputValues []strin
 
 	r := map[string][]*HelmImage{}
 	for _, v := range mi {
-		r[v.App] = append(r[v.App], v)
+		r[v.Alias] = append(r[v.Alias], v)
 	}
 
 	result := &HelmImages{Images: r}
@@ -88,10 +88,10 @@ func TemplateImagesFromChart(chrt *v2.Chart, product string, inputValues []strin
 
 func TemplateImagesList(manifests []string) ([]*HelmImage, error) {
 	var images []*HelmImage
-	err := decodeManifests(manifests, func(doc any) {
-		kind, app := manifestInfo(doc)
+	err := decodeManifests(manifests, func(doc any, app string) {
+		kind := manifestInfo(doc)
 		collectImages(doc, func(img, key string) {
-			images = append(images, &HelmImage{Image: img, Kind: kind, App: app, Key: key})
+			images = append(images, &HelmImage{Image: img, Kind: kind, Alias: app, Key: key})
 		})
 	})
 	if err != nil {
@@ -100,34 +100,71 @@ func TemplateImagesList(manifests []string) ([]*HelmImage, error) {
 	return images, nil
 }
 
-func decodeManifests(manifests []string, fn func(doc any)) error {
+func decodeManifests(manifests []string, fn func(doc any, app string)) error {
 	for _, m := range manifests {
-		dec := yaml.NewDecoder(strings.NewReader(m))
-		for {
+		for _, item := range splitDocs(m) {
+			file := manifestFile(item)
+			charts := manifestSubcharts(file)
+			alias := charts[0]
+			dec := yaml.NewDecoder(strings.NewReader(item))
 			var doc any
-			if err := dec.Decode(&doc); err == io.EOF {
-				break
-			} else if err != nil {
+			if err := dec.Decode(&doc); err != nil {
 				return fmt.Errorf("parse rendered manifest of document: %w", err)
 			}
-			fn(doc)
+			fn(doc, alias)
 		}
 	}
 	return nil
 }
 
-func manifestInfo(doc any) (kind, app string) {
-	m, ok := doc.(map[string]any)
-	if !ok {
-		return "", ""
+var docSep = regexp.MustCompile(`(?m)^---[ \t]*$`)
+
+// splitDocs splits a multi-document YAML string into non-empty documents.
+func splitDocs(manifest string) []string {
+	var docs []string
+	for _, d := range docSep.Split(manifest, -1) {
+		if strings.TrimSpace(d) == "" {
+			continue // leading "---" yields an empty first part
+		}
+		docs = append(docs, strings.TrimSpace(d))
 	}
-	kind, _ = m["kind"].(string)
-	if meta, ok := m["metadata"].(map[string]any); ok {
-		if labels, ok := meta["labels"].(map[string]any); ok {
-			app, _ = labels["app"].(string)
+	return docs
+}
+
+func manifestFile(m string) string {
+	sc := bufio.NewScanner(strings.NewReader(m))
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" || line == "---" {
+			continue
+		}
+		if p, ok := strings.CutPrefix(line, "# Source:"); ok {
+			return strings.TrimSpace(p)
+		}
+		return ""
+	}
+	return ""
+}
+
+func manifestSubcharts(path string) []string {
+	parts := strings.Split(path, "/")
+	var out []string
+	for i := 1; i+1 < len(parts); i++ {
+		if parts[i] == "charts" {
+			out = append(out, parts[i+1])
+			i++
 		}
 	}
-	return kind, app
+	return out
+}
+
+func manifestInfo(doc any) (kind string) {
+	m, ok := doc.(map[string]any)
+	if !ok {
+		return ""
+	}
+	kind, _ = m["kind"].(string)
+	return kind
 }
 
 // collectImages walks any object so Pods, Deployments, StatefulSets, Jobs and CronJobs are all covered.

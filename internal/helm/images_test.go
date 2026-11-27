@@ -109,9 +109,9 @@ func TestManifestInfo(t *testing.T) {
 		{"valid labels", map[string]any{"kind": "Job", "metadata": map[string]any{"labels": map[string]any{"app": "worker"}}}, "Job", "worker"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			kind, app := manifestInfo(tt.doc)
-			if kind != tt.kind || app != tt.app {
-				t.Fatalf("manifestInfo() = %q, %q; want %q, %q", kind, app, tt.kind, tt.app)
+			kind := manifestInfo(tt.doc)
+			if kind != tt.kind {
+				t.Fatalf("manifestInfo() = %q; want %q", kind, tt.kind)
 			}
 		})
 	}
